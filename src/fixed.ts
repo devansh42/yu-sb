@@ -1,0 +1,10 @@
+export const YU_DOMAIN_NAME = "localhost";
+export const YU_DO_TOKEN = "dotoken";
+export const YU_DO_SPACES_REGION = "sgp1";
+export const YU_DO_SPACES_ACCESS_KEY_ID = "sgp1";
+export const YU_DO_SPACES_SECRET_ACCESS_KEY = "sgp1";
+export const YU_DO_BUCKET_NAME = "";
+export const YU_DO_SPACES_ENDPOINT = '';
+export const YU_STATIC_DOMAIN_SUFFIX = "bsnl.online"
+export const YU_BACKEND_PORT = "8080";
+export const subDomainRegexp = /^[A-Za-z0-9](?:[A-Za-z0-9\-]{0,61}[A-Za-z0-9])?$/
