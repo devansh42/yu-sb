@@ -19,19 +19,25 @@ export function validateAuthCredentials(req: express.Request, res: express.Respo
 export async function handleLogin(req: express.Request, res: express.Response) {
     const { email, password } = req.body;
     const db = await getDB();
-    let stmt = await db.prepare("select uid from users where email=? and password=? limit 1");
-    let rows = await stmt.all(email, password)
-    if (rows.length == 1) {
-        let access_token = createKJWTToken(rows[0].uid)
-        res.status(200).json({ email, access_token }).end();
+    try {
 
-    } else {
-        //Invalid credentials
-        res.status(403).send().end();
+        let stmt = await db.prepare("select uid from users where email=? and password=? limit 1");
+        let rows = await stmt.all(email, password)
+        if (rows.length == 1) {
+            let access_token = createKJWTToken(rows[0].uid)
+            res.status(200).json({ email, access_token }).end();
+
+        } else {
+            //Invalid credentials
+            res.status(403).send().end();
+        }
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).end();
+    } finally {
+        await db.close();
     }
-
-    await db.close();
-
 }
 
 
@@ -39,24 +45,32 @@ export async function handleLogin(req: express.Request, res: express.Response) {
 export async function handleSignup(req: express.Request, res: express.Response) {
     const { email, password } = req.body;
     const db = await getDB();
-    let stmt = await db.prepare("select uid from users where email=? and password=? limit 1");
-    let rows = await stmt.all(email, password)
-    if (rows.length == 1) {
-        res.status(200).send().end();
-    } else if (rows.length == 0) {
-        //Invalid credentials
-        stmt = await db.prepare("select uid from users where email=? limit 1");
-        rows = await stmt.all(email);
-        if (rows.length == 1) res.status(403).send().end();
-        else {
-            stmt = await db.prepare("insert into users(email,password)values(?,?)");
-            let r = await stmt.run(email, password);
-            let access_token = createKJWTToken(r.lastID)
-            res.status(201).json({ email, access_token }).end();
-        }
-    }
+    try {
 
-    await db.close();
+        let stmt = await db.prepare("select uid from users where email=? and password=? limit 1");
+        let rows = await stmt.all(email, password)
+        if (rows.length == 1) {
+            res.status(200).send().end();
+        } else if (rows.length == 0) {
+            //Invalid credentials
+            stmt = await db.prepare("select uid from users where email=? limit 1");
+            rows = await stmt.all(email);
+            if (rows.length == 1) res.status(403).send().end();
+            else {
+                stmt = await db.prepare("insert into users(email,password)values(?,?)");
+                let r = await stmt.run(email, password);
+                let access_token = createKJWTToken(r.lastID)
+                res.status(201).json({ email, access_token }).end();
+                await stmt.finalize();
+            }
+        }
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).end();
+    } finally {
+        await db.close();
+    }
 }
 
 
@@ -67,17 +81,18 @@ export function jwtTokenVerifier(req: express.Request, res: express.Response, ne
     if (t == "" || t == undefined || t.split(" ").length != 2) {
         msg = "Invalid jwt token: Authentication Required";
         res.status(403).send(msg).end();
-
+        console.log(msg);
     }
     try {
         const pay = verify(t.split(" ")[1], someSecret);
-        req.body.uid = JSON.parse(pay.toString()).data;
+        
+        req.body.uid = pay["data"];
         next();
-
     } catch (error) {
         msg = "Invalid/Expired Token : Authentication Required";
         res.status(403).send(msg).end();
 
+        console.log(error)
     }
 }
 

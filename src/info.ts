@@ -5,26 +5,35 @@ import { subDomainRegexp, YU_DOMAIN_NAME } from "./fixed";
 import * as dns from "dns";
 
 //handleList handles listing of project
-export async function handleList(req: express.Request, res: express.Response, next: express.NextFunction) {
+export async function handleList(req: express.Request, res: express.Response) {
     const { only_deployed } = req.query;
     const { uid } = req.body;
     const db = await getDB();
-    let sql = "select hostname,status from deployments where uid=?";
-    if (only_deployed == undefined || !only_deployed) {
-        //Fetch all
-    } else {
-        sql.concat(" and status=1");
+    try {
+
+        let sql = "select hostname,status from deployments where uid=?";
+        if (only_deployed == undefined || !only_deployed) {
+            //Fetch all
+        } else {
+            sql.concat(" and status=1");
+        }
+
+        let stmt = await db.prepare(sql);
+        let rows = await stmt.all(uid)
+        await stmt.finalize()
+        res.status(200).json(
+            rows.map(v => {
+                    return { hostname: v.hostname, deployed: v.status == 1 }
+            })
+        ).end();
+
+    } catch (error) {
+        console.log(error)
+        res.status(500).send("Internal server error").end();
+    } finally {
+        await db.close();
+
     }
-
-    let stmt = await db.prepare(sql);
-    let rows = await stmt.all(uid)
-    res.status(200).json(
-        rows.map((v, i) => {
-            return { hostname: v.hostname, deployed: v.status == 1 }
-        })
-    ).end();
-
-    await db.close();
 }
 
 
@@ -45,14 +54,14 @@ export async function handleRecommend(req: express.Request, res: express.Respons
             s: hostname.toString().split(".")[0],
             max: 10 //Max 10 suggestion
         });
-        const s = ar.map(({ word }) => word.contains(" ") ? word.split(" ").join("-") : word)
+
+        const s = ar.map(({ word }) => word.search(" ") > -1 ? word.split(" ").join("-") : word)
             .filter((w: string) => subDomainRegexp.test(w))
             .filter(async (w: string) => !isHostExists([w, YU_DOMAIN_NAME].join(".")));
-
-
         res.status(200).json(s).end();
     } catch (err) {
-        res.status(500).send("Couldn't suggest a domain")
+        res.status(500).send("Couldn't suggest a domain").end();
+        console.log(err)
     }
 }
 

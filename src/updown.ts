@@ -38,21 +38,30 @@ export async function validateUp(req: express.Request, res: express.Response, ne
 export async function handleUp(req: express.Request, res: express.Response) {
 
     const { hostname, uid, type, files, wd } = req.body;
+    console.log(type);
     sendSignal(hostname, type, true); //sending signal to server
     uploadFile(hostname, files, wd);
     const db = await getDB();
-    let stmt = await db.prepare("update deployments set type=? and set status=? where uid=? and hostname=? limit 1");
-    let r = await stmt.run(type, 1, uid, hostname)
-    if (r.changes == 0) {
-        // We have to insert a new row
-        stmt = await db.prepare("insert into deployments (hostname,uid,status,type)values(?,?,?,?)");
-        await stmt.run(hostname, uid, 1, type)
+    try {
 
+        let stmt = await db.prepare("update deployments set type=?,status=? where uid=? and hostname=? ");
+        let r = await stmt.run(type, 1, uid, hostname)
+        await stmt.finalize();
+        if (r.changes == 0) {
+            // We have to insert a new row
+            stmt = await db.prepare("insert into deployments (hostname,uid,status,type)values(?,?,?,?)");
+            await stmt.run(hostname, uid, 1, type)
+            await stmt.finalize();
+
+        }
+        res.status(200).end();
+    } catch (error) {
+        console.error(error);
+        res.status(500).end();
+    } finally {
+
+        await db.close();
     }
-
-
-    await db.close();
-
 }
 
 function uploadFile(hostname: string, files: string, wd: string) {
@@ -71,8 +80,11 @@ function uploadFile(hostname: string, files: string, wd: string) {
                 console.log(err);
             })
             .finally(() => {
-                d.cleanup(); //Cleaning up resources
-                f.cleanup(); //Cleaning up resources
+                f.cleanup() //Cleaning up resources
+                    .then(() => { })
+                    .catch(console.log);
+
+                fs.rmdirSync(d.path, { recursive: true }); //Cleanup temporary directory
             })
 
     })
@@ -117,26 +129,37 @@ function isValidHostname(h: string) {
 
 
 export async function handleDown(req: express.Request, res: express.Response) {
-    const db = await getDB();
     const { uid, hostname } = req.body;
-    let stmt = await db.prepare("select status,type from deployments where uid=? and hostname=? limit 1");
-    let rows = await stmt.all(uid, hostname);
-    if (rows.length == 0) {
-        // Website doesn't belongs to you
-        res.status(401).end();
-    } else {
-        if (rows[0].status == 1) {
-            //Site is deployed 
-            stmt = await db.prepare("update deployments set status=? where hostname=? and uid=? limit 1");
-            sendSignal(hostname, rows[0].type, false);
-            await stmt.run(0, hostname, uid)
-            res.status(200).end();
-        } else {
-            res.status(404).end();
-        }
-    }
-    await db.close();
 
+    const db = await getDB();
+    try {
+
+        let stmt = await db.prepare("select status,type from deployments where uid=? and hostname=? limit 1");
+        let rows = await stmt.all(uid, hostname);
+        await stmt.finalize();
+        if (rows.length == 0) {
+            // Website doesn't belongs to you
+            res.status(401).end();
+        } else {
+            if (rows[0].status == 1) {
+                //Site is deployed 
+                stmt = await db.prepare("update deployments set status=? where hostname=? and uid=? ");
+                sendSignal(hostname, rows[0].type, false);
+                await stmt.run(0, hostname, uid)
+                await stmt.finalize();
+                res.status(200).end();
+            } else {
+                res.status(404).end();
+            }
+        }
+
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).end();
+    } finally {
+        await db.close();
+    }
 }
 
 function sendSignal(hostname: string, type: string, deploy: boolean) {

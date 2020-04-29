@@ -37,10 +37,13 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var db_1 = require("./db");
+var datamuse = require("datamuse");
+var fixed_1 = require("./fixed");
+var dns = require("dns");
 //handleList handles listing of project
-function handleList(req, res, next) {
+function handleList(req, res) {
     return __awaiter(this, void 0, void 0, function () {
-        var only_deployed, uid, db, sql, stmt, rows;
+        var only_deployed, uid, db, sql, stmt, rows, error_1;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
@@ -49,6 +52,9 @@ function handleList(req, res, next) {
                     return [4 /*yield*/, db_1.getDB()];
                 case 1:
                     db = _a.sent();
+                    _a.label = 2;
+                case 2:
+                    _a.trys.push([2, 6, 7, 9]);
                     sql = "select hostname,status from deployments where uid=?";
                     if (only_deployed == undefined || !only_deployed) {
                         //Fetch all
@@ -57,20 +63,101 @@ function handleList(req, res, next) {
                         sql.concat(" and status=1");
                     }
                     return [4 /*yield*/, db.prepare(sql)];
-                case 2:
+                case 3:
                     stmt = _a.sent();
                     return [4 /*yield*/, stmt.all(uid)];
-                case 3:
+                case 4:
                     rows = _a.sent();
-                    res.status(200).json(rows.map(function (v, i) {
+                    return [4 /*yield*/, stmt.finalize()];
+                case 5:
+                    _a.sent();
+                    res.status(200).json(rows.map(function (v) {
                         return { hostname: v.hostname, deployed: v.status == 1 };
                     })).end();
-                    return [4 /*yield*/, db.close()];
-                case 4:
+                    return [3 /*break*/, 9];
+                case 6:
+                    error_1 = _a.sent();
+                    console.log(error_1);
+                    res.status(500).send("Internal server error").end();
+                    return [3 /*break*/, 9];
+                case 7: return [4 /*yield*/, db.close()];
+                case 8:
                     _a.sent();
-                    return [2 /*return*/];
+                    return [7 /*endfinally*/];
+                case 9: return [2 /*return*/];
             }
         });
     });
 }
 exports.handleList = handleList;
+function validateRecommed(req, res, next) {
+    var hostname = req.query.hostname;
+    if (hostname == undefined)
+        res.status(400).send('Hostname Required').end();
+    else {
+        if (hostname.toString().split(".").length !== 3)
+            res.status(400).send("Invalid Hostname").end();
+        else
+            next();
+    }
+}
+exports.validateRecommed = validateRecommed;
+function handleRecommend(req, res) {
+    return __awaiter(this, void 0, void 0, function () {
+        var hostname, ar, s, err_1;
+        var _this = this;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    hostname = req.query.hostname;
+                    _a.label = 1;
+                case 1:
+                    _a.trys.push([1, 3, , 4]);
+                    return [4 /*yield*/, datamuse.sug({
+                            s: hostname.toString().split(".")[0],
+                            max: 10 //Max 10 suggestion
+                        })];
+                case 2:
+                    ar = _a.sent();
+                    s = ar.map(function (_a) {
+                        var word = _a.word;
+                        return word.search(" ") > -1 ? word.split(" ").join("-") : word;
+                    })
+                        .filter(function (w) { return fixed_1.subDomainRegexp.test(w); })
+                        .filter(function (w) { return __awaiter(_this, void 0, void 0, function () { return __generator(this, function (_a) {
+                        return [2 /*return*/, !isHostExists([w, fixed_1.YU_DOMAIN_NAME].join("."))];
+                    }); }); });
+                    res.status(200).json(s).end();
+                    return [3 /*break*/, 4];
+                case 3:
+                    err_1 = _a.sent();
+                    res.status(500).send("Couldn't suggest a domain").end();
+                    console.log(err_1);
+                    return [3 /*break*/, 4];
+                case 4: return [2 /*return*/];
+            }
+        });
+    });
+}
+exports.handleRecommend = handleRecommend;
+//isHostExists checks if hostname exists or not via hostname lookup
+function isHostExists(hostname) {
+    return __awaiter(this, void 0, void 0, function () {
+        var err_2;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    _a.trys.push([0, 2, , 3]);
+                    return [4 /*yield*/, dns.promises.lookup(hostname)];
+                case 1:
+                    _a.sent();
+                    return [2 /*return*/, true]; //Lookup is successful and can't be used
+                case 2:
+                    err_2 = _a.sent();
+                    return [2 /*return*/, false];
+                case 3: return [2 /*return*/];
+            }
+        });
+    });
+}
+exports.isHostExists = isHostExists;

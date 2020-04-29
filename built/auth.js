@@ -54,7 +54,7 @@ function validateAuthCredentials(req, res, next) {
 exports.validateAuthCredentials = validateAuthCredentials;
 function handleLogin(req, res) {
     return __awaiter(this, void 0, void 0, function () {
-        var _a, email, password, db, stmt, rows, access_token;
+        var _a, email, password, db, stmt, rows, access_token, error_1;
         return __generator(this, function (_b) {
             switch (_b.label) {
                 case 0:
@@ -62,11 +62,14 @@ function handleLogin(req, res) {
                     return [4 /*yield*/, db_1.getDB()];
                 case 1:
                     db = _b.sent();
-                    return [4 /*yield*/, db.prepare("select uid from users where email=? and password=? limit 1")];
+                    _b.label = 2;
                 case 2:
+                    _b.trys.push([2, 5, 6, 8]);
+                    return [4 /*yield*/, db.prepare("select uid from users where email=? and password=? limit 1")];
+                case 3:
                     stmt = _b.sent();
                     return [4 /*yield*/, stmt.all(email, password)];
-                case 3:
+                case 4:
                     rows = _b.sent();
                     if (rows.length == 1) {
                         access_token = createKJWTToken(rows[0].uid);
@@ -76,10 +79,17 @@ function handleLogin(req, res) {
                         //Invalid credentials
                         res.status(403).send().end();
                     }
-                    return [4 /*yield*/, db.close()];
-                case 4:
+                    return [3 /*break*/, 8];
+                case 5:
+                    error_1 = _b.sent();
+                    console.error(error_1);
+                    res.status(500).end();
+                    return [3 /*break*/, 8];
+                case 6: return [4 /*yield*/, db.close()];
+                case 7:
                     _b.sent();
-                    return [2 /*return*/];
+                    return [7 /*endfinally*/];
+                case 8: return [2 /*return*/];
             }
         });
     });
@@ -88,7 +98,7 @@ exports.handleLogin = handleLogin;
 //handleSignup handles singup process
 function handleSignup(req, res) {
     return __awaiter(this, void 0, void 0, function () {
-        var _a, email, password, db, stmt, rows, r, access_token;
+        var _a, email, password, db, stmt, rows, r, access_token, error_2;
         return __generator(this, function (_b) {
             switch (_b.label) {
                 case 0:
@@ -96,40 +106,53 @@ function handleSignup(req, res) {
                     return [4 /*yield*/, db_1.getDB()];
                 case 1:
                     db = _b.sent();
-                    return [4 /*yield*/, db.prepare("select uid from users where email=? and password=? limit 1")];
+                    _b.label = 2;
                 case 2:
+                    _b.trys.push([2, 13, 14, 16]);
+                    return [4 /*yield*/, db.prepare("select uid from users where email=? and password=? limit 1")];
+                case 3:
                     stmt = _b.sent();
                     return [4 /*yield*/, stmt.all(email, password)];
-                case 3:
-                    rows = _b.sent();
-                    if (!(rows.length == 1)) return [3 /*break*/, 4];
-                    res.status(200).send().end();
-                    return [3 /*break*/, 10];
                 case 4:
-                    if (!(rows.length == 0)) return [3 /*break*/, 10];
-                    return [4 /*yield*/, db.prepare("select uid from users where email=? limit 1")];
+                    rows = _b.sent();
+                    if (!(rows.length == 1)) return [3 /*break*/, 5];
+                    res.status(200).send().end();
+                    return [3 /*break*/, 12];
                 case 5:
+                    if (!(rows.length == 0)) return [3 /*break*/, 12];
+                    return [4 /*yield*/, db.prepare("select uid from users where email=? limit 1")];
+                case 6:
                     //Invalid credentials
                     stmt = _b.sent();
                     return [4 /*yield*/, stmt.all(email)];
-                case 6:
+                case 7:
                     rows = _b.sent();
-                    if (!(rows.length == 1)) return [3 /*break*/, 7];
+                    if (!(rows.length == 1)) return [3 /*break*/, 8];
                     res.status(403).send().end();
-                    return [3 /*break*/, 10];
-                case 7: return [4 /*yield*/, db.prepare("insert into users(email,password)values(?,?)")];
-                case 8:
+                    return [3 /*break*/, 12];
+                case 8: return [4 /*yield*/, db.prepare("insert into users(email,password)values(?,?)")];
+                case 9:
                     stmt = _b.sent();
                     return [4 /*yield*/, stmt.run(email, password)];
-                case 9:
+                case 10:
                     r = _b.sent();
                     access_token = createKJWTToken(r.lastID);
                     res.status(201).json({ email: email, access_token: access_token }).end();
-                    _b.label = 10;
-                case 10: return [4 /*yield*/, db.close()];
+                    return [4 /*yield*/, stmt.finalize()];
                 case 11:
                     _b.sent();
-                    return [2 /*return*/];
+                    _b.label = 12;
+                case 12: return [3 /*break*/, 16];
+                case 13:
+                    error_2 = _b.sent();
+                    console.error(error_2);
+                    res.status(500).end();
+                    return [3 /*break*/, 16];
+                case 14: return [4 /*yield*/, db.close()];
+                case 15:
+                    _b.sent();
+                    return [7 /*endfinally*/];
+                case 16: return [2 /*return*/];
             }
         });
     });
@@ -141,15 +164,17 @@ function jwtTokenVerifier(req, res, next) {
     if (t == "" || t == undefined || t.split(" ").length != 2) {
         msg = "Invalid jwt token: Authentication Required";
         res.status(403).send(msg).end();
+        console.log(msg);
     }
     try {
         var pay = jsonwebtoken_1.verify(t.split(" ")[1], someSecret);
-        req.body.uid = JSON.parse(pay.toString()).data;
+        req.body.uid = pay["data"];
         next();
     }
     catch (error) {
         msg = "Invalid/Expired Token : Authentication Required";
         res.status(403).send(msg).end();
+        console.log(error);
     }
 }
 exports.jwtTokenVerifier = jwtTokenVerifier;

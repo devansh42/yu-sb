@@ -1,4 +1,15 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.YU_DOMAIN_NAME = "localhost";
-exports.YU_DO_TOKEN = "dotoken";
+var path_1 = require("path");
+var e = process.env;
+exports.YU_DOMAIN_NAME = e.YU_DOMAIN_NAME || "localhost";
+exports.YU_DO_SPACES_REGION = e.YU_DO_SPACES_REGION || "sgp1";
+exports.YU_DO_SPACES_ACCESS_KEY_ID = e.YU_DO_SPACES_ACCESS_KEY_ID || "sgp1";
+exports.YU_DO_SPACES_SECRET_ACCESS_KEY = e.YU_DO_SPACES_SECRET_ACCESS_KEY || "sgp1";
+exports.YU_DO_BUCKET_NAME = e.YU_DO_BUCKET_NAME || "";
+exports.YU_DO_SPACES_ENDPOINT = e.YU_DO_SPACES_ENDPOINT || '';
+exports.YU_STATIC_DOMAIN_SUFFIX = e.YU_STATIC_DOMAIN_SUFFIX || "bsnl.online";
+exports.YU_BACKEND_PORT = e.YU_BACKEND_PORT || "8080";
+exports.YU_REDIS_HOST = e.YU_REDIS_HOST || "localhost";
+exports.YU_DB_FILE = e.YU_DB_FILE || path_1.join(process.cwd(), "data", "data.db");
+exports.subDomainRegexp = /^[A-Za-z0-9](?:[A-Za-z0-9\-]{0,61}[A-Za-z0-9])?$/;

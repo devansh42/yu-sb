@@ -38,11 +38,12 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var sqlite_1 = require("sqlite");
 var sqlite3 = require("sqlite3");
+var fixed_1 = require("./fixed");
 function getDB() {
     return __awaiter(this, void 0, void 0, function () {
         return __generator(this, function (_a) {
             return [2 /*return*/, sqlite_1.open({
-                    filename: "data.db",
+                    filename: fixed_1.YU_DB_FILE,
                     driver: sqlite3.Database
                 })];
         });

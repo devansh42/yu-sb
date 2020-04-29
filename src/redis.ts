@@ -1,18 +1,12 @@
 import * as sqlite3 from 'sqlite3';
 import { open } from "sqlite";
 import { createClient, RedisClient } from 'redis';
-import { promisify } from "util";
+import { YU_REDIS_HOST, YU_DB_FILE } from "./fixed";
 
-export async function getDatabase() {
-    return open({
-        driver: sqlite3.Database,
-        filename: "data.db"
-    });
-}
 
 export function getRedis(): RedisClient {
     //const red = new RedisClientAsync(createClient());
-    return createClient();
+    return createClient({ host: YU_REDIS_HOST });
 }
 
 // export class RedisClientAsync {
