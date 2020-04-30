@@ -12,4 +12,5 @@ exports.YU_STATIC_DOMAIN_SUFFIX = e.YU_STATIC_DOMAIN_SUFFIX || "bsnl.online";
 exports.YU_BACKEND_PORT = e.YU_BACKEND_PORT || "8080";
 exports.YU_REDIS_HOST = e.YU_REDIS_HOST || "localhost";
 exports.YU_DB_FILE = e.YU_DB_FILE || path_1.join(process.cwd(), "data", "data.db");
+exports.YU_DO_TOKEN = e.YU_DO_TOKEN;
 exports.subDomainRegexp = /^[A-Za-z0-9](?:[A-Za-z0-9\-]{0,61}[A-Za-z0-9])?$/;

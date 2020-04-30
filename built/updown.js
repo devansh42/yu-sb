@@ -141,7 +141,9 @@ function uploadFile(hostname, files, wd) {
                 case 2:
                     _a.sent();
                     ar = walkDir(path_1.join(d.path, wd));
-                    p = ar.map(function (src) { return s3.upload({ Bucket: fixed_1.YU_DO_BUCKET_NAME, Body: fs.readFileSync(src), Key: src.replace(path_1.join(d.path, wd), hostname) }).promise(); });
+                    p = ar.map(function (src) { return s3.putObject({ Bucket: fixed_1.YU_DO_BUCKET_NAME,
+                        ACL: "public-read",
+                        Body: fs.readFileSync(src), Key: src.replace(path_1.join(d.path, wd), hostname) }).promise(); });
                     Promise.all(p)
                         .then(function () {
                     })
