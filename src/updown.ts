@@ -70,7 +70,9 @@ function uploadFile(hostname: string, files: string, wd: string) {
         const d = await dir();
         await x({ file: f.path, cwd: d.path })
         let ar = walkDir(join(d.path, wd))
-        const p = ar.map(src => s3.upload({ Bucket: YU_DO_BUCKET_NAME, Body: fs.readFileSync(src), Key: src.replace(join(d.path, wd), hostname) }).promise()
+        const p = ar.map(src => s3.upload({ Bucket: YU_DO_BUCKET_NAME,
+            ACL:"public-read", //Canned ACL For public making files publiclly readable
+            Body: fs.readFileSync(src), Key: src.replace(join(d.path, wd), hostname) }).promise()
         );
         Promise.all(p)
             .then(() => {
