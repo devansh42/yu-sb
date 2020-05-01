@@ -1,7 +1,10 @@
 FROM node:alpine
 ADD . /backend
 WORKDIR /backend
-RUN npm i 
-RUN npm i tsc 
-RUN npm run build
+#RUN apk update
+RUN apk update
+RUN apk add sqlite alpine-sdk python3 python
+
+RUN npm i
+ 
 CMD node . > /var/log/backend.log 2>&1
