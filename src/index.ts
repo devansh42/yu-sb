@@ -18,7 +18,7 @@ app.get("/list", handleList);
 app.get("/recommend", handleRecommend, validateRecommed);
 app.post("/down", handleDown, validateDown);
 app.post("/up", handleUp, validateUp);
-app.post("/host", handleHostExists, validateHostExists);
+app.get("/host", handleHostExists, validateHostExists);
 
 app.listen(YU_BACKEND_PORT, () => {
     console.log("Listeing at ", YU_BACKEND_PORT);
