@@ -11,4 +11,5 @@ export const YU_BACKEND_PORT = e.YU_BACKEND_PORT || "8080";
 export const YU_REDIS_HOST = e.YU_REDIS_HOST || "localhost"
 export const YU_DB_FILE = e.YU_DB_FILE || join(process.cwd(), "data", "data.db")
 export const YU_DO_TOKEN = e.YU_DO_TOKEN
+export const YU_JWT_SECRET = e.YU_JWT_SECRET || "somesecretstring";
 export const subDomainRegexp = /^[A-Za-z0-9](?:[A-Za-z0-9\-]{0,61}[A-Za-z0-9])?$/

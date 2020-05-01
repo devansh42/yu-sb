@@ -11,6 +11,9 @@
 |YU_DO_SPACES_ENDPOINT|Space endpoint|
 |YU_STATIC_DOMAIN_SUFFIX|Static Site domani suffix|
 |YU_BACKEND_PORT|Backend server listening port|
+|YU_REDIS_HOST|Redis Hostname|
+|YU_JWT_SECRET|JWT Secret file|
+|YU_DB_FILE|File for database|
 
 
 

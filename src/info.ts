@@ -1,9 +1,10 @@
 import * as express from "express";
 import { getDB } from "./db";
 import * as datamuse from "datamuse";
-import { subDomainRegexp, YU_DOMAIN_NAME } from "./fixed";
-import * as dns from "dns";
+import { subDomainRegexp, YU_DOMAIN_NAME, YU_STATIC_DOMAIN_SUFFIX } from "./fixed";
 
+import { getRedis } from "./redis";
+import { promisify } from "util";
 //handleList handles listing of project
 export async function handleList(req: express.Request, res: express.Response) {
     const { only_deployed } = req.query;
@@ -23,7 +24,7 @@ export async function handleList(req: express.Request, res: express.Response) {
         await stmt.finalize()
         res.status(200).json(
             rows.map(v => {
-                    return { hostname: v.hostname, deployed: v.status == 1 }
+                return { hostname: v.hostname, deployed: v.status == 1 }
             })
         ).end();
 
@@ -65,15 +66,39 @@ export async function handleRecommend(req: express.Request, res: express.Respons
     }
 }
 
+export async function validateHostExists(req: express.Request, res: express.Response, next: express.NextFunction) {
+    const { hostname } = req.query;
+    const h = String(hostname);
+    if (h == undefined) res.status(400).end();
+    if (!isValidHostname(h)) res.status(400).end();
+    else next();
+
+}
+
+export async function handleHostExists(req: express.Request, res: express.Response) {
+    const { hostname } = req.query;
+    if (await isHostExists(String(hostname))) {
+        res.status(200).end();
+    } else {
+        res.status(404).end();
+    }
+}
+
 
 
 //isHostExists checks if hostname exists or not via hostname lookup
 export async function isHostExists(hostname: string) {
-    try {
-        await dns.promises.lookup(hostname)
-        return true; //Lookup is successful and can't be used
-    } catch (err) {
-        return false;
-    }
+    const rd = getRedis();
+    const s = hostname.split(".")[0]
+    const p = promisify(rd.sismember).bind(rd);
+    return await p("domains", s) == 1
+
 
 }
+
+export function isValidHostname(h: string) {
+    if (h.split(".").length !== 3) return false;
+    else if (!h.endsWith(YU_STATIC_DOMAIN_SUFFIX)) return false;
+    return subDomainRegexp.test(h.split(".")[0])
+}
+

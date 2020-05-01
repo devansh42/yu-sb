@@ -11,7 +11,7 @@ import * as mime from "mime-types";
 
 import { YU_DO_SPACES_REGION, YU_DO_SPACES_ACCESS_KEY_ID, YU_DO_SPACES_SECRET_ACCESS_KEY, YU_DO_BUCKET_NAME, YU_DO_SPACES_ENDPOINT, YU_STATIC_DOMAIN_SUFFIX, subDomainRegexp } from "./fixed";
 
-import { isHostExists } from "./info";
+import { isHostExists, isValidHostname } from "./info";
 
 
 //AWS Configuration initalization
@@ -131,13 +131,6 @@ export function validateDown(req: express.Request, res: express.Response, next: 
 }
 
 
-function isValidHostname(h: string) {
-    if (h.split(".").length !== 3) return false;
-    else if (!h.endsWith(YU_STATIC_DOMAIN_SUFFIX)) return false;
-    return subDomainRegexp.test(h.split(".")[0])
-}
-
-
 export async function handleDown(req: express.Request, res: express.Response) {
     const { uid, hostname } = req.body;
 
@@ -179,6 +172,11 @@ function sendSignal(hostname: string, type: string, deploy: boolean) {
         "site-hostname": hostname,
         "site-type": type
     }));
-
+    const h = hostname.split(".")[0];
+    if (deploy) {
+        rd.sadd("domains", h);  //adding to cache
+    } else {
+        rd.srem("domains", h); //removing from cache
+    }
 
 }

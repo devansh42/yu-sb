@@ -4,6 +4,7 @@ import * as express from "express";
 import { sign, verify } from "jsonwebtoken";
 import { getDB } from "./db";
 import * as crypto from "crypto";
+import { YU_JWT_SECRET } from "./fixed";
 //Validates things for signup/login function
 export function validateAuthCredentials(req: express.Request, res: express.Response, next: express.NextFunction) {
     const { email, password } = req.body;
@@ -113,7 +114,7 @@ export function jwtTokenVerifier(req: express.Request, res: express.Response, ne
 }
 
 
-const someSecret = "somesecret";
+const someSecret = YU_JWT_SECRET;
 
 function createKJWTToken(userid: number) {
     const token = sign({
