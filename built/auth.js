@@ -39,6 +39,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var jsonwebtoken_1 = require("jsonwebtoken");
 var db_1 = require("./db");
 var crypto = require("crypto");
+var fixed_1 = require("./fixed");
 //Validates things for signup/login function
 function validateAuthCredentials(req, res, next) {
     var _a = req.body, email = _a.email, password = _a.password;
@@ -184,7 +185,7 @@ function jwtTokenVerifier(req, res, next) {
     }
 }
 exports.jwtTokenVerifier = jwtTokenVerifier;
-var someSecret = "somesecret";
+var someSecret = fixed_1.YU_JWT_SECRET;
 function createKJWTToken(userid) {
     var token = jsonwebtoken_1.sign({
         data: userid,

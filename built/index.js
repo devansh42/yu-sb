@@ -15,6 +15,7 @@ app.get("/list", info_1.handleList);
 app.get("/recommend", info_1.handleRecommend, info_1.validateRecommed);
 app.post("/down", updown_1.handleDown, updown_1.validateDown);
 app.post("/up", updown_1.handleUp, updown_1.validateUp);
+app.post("/host", info_1.handleHostExists, info_1.validateHostExists);
 app.listen(fixed_1.YU_BACKEND_PORT, function () {
     console.log("Listeing at ", fixed_1.YU_BACKEND_PORT);
 });

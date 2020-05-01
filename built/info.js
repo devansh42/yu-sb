@@ -39,7 +39,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var db_1 = require("./db");
 var datamuse = require("datamuse");
 var fixed_1 = require("./fixed");
-var dns = require("dns");
+var redis_1 = require("./redis");
+var util_1 = require("util");
 //handleList handles listing of project
 function handleList(req, res) {
     return __awaiter(this, void 0, void 0, function () {
@@ -140,24 +141,66 @@ function handleRecommend(req, res) {
     });
 }
 exports.handleRecommend = handleRecommend;
-//isHostExists checks if hostname exists or not via hostname lookup
-function isHostExists(hostname) {
+function validateHostExists(req, res, next) {
     return __awaiter(this, void 0, void 0, function () {
-        var err_2;
+        var hostname, h;
+        return __generator(this, function (_a) {
+            hostname = req.query.hostname;
+            h = String(hostname);
+            if (h == undefined)
+                res.status(400).end();
+            if (!isValidHostname(h))
+                res.status(400).end();
+            else
+                next();
+            return [2 /*return*/];
+        });
+    });
+}
+exports.validateHostExists = validateHostExists;
+function handleHostExists(req, res) {
+    return __awaiter(this, void 0, void 0, function () {
+        var hostname;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0:
-                    _a.trys.push([0, 2, , 3]);
-                    return [4 /*yield*/, dns.promises.lookup(hostname)];
+                    hostname = req.query.hostname;
+                    return [4 /*yield*/, isHostExists(String(hostname))];
                 case 1:
-                    _a.sent();
-                    return [2 /*return*/, true]; //Lookup is successful and can't be used
-                case 2:
-                    err_2 = _a.sent();
-                    return [2 /*return*/, false];
-                case 3: return [2 /*return*/];
+                    if (_a.sent()) {
+                        res.status(200).end();
+                    }
+                    else {
+                        res.status(404).end();
+                    }
+                    return [2 /*return*/];
+            }
+        });
+    });
+}
+exports.handleHostExists = handleHostExists;
+//isHostExists checks if hostname exists or not via hostname lookup
+function isHostExists(hostname) {
+    return __awaiter(this, void 0, void 0, function () {
+        var rd, s, p;
+        return __generator(this, function (_a) {
+            switch (_a.label) {
+                case 0:
+                    rd = redis_1.getRedis();
+                    s = hostname.split(".")[0];
+                    p = util_1.promisify(rd.sismember).bind(rd);
+                    return [4 /*yield*/, p("domains", s)];
+                case 1: return [2 /*return*/, (_a.sent()) == 1];
             }
         });
     });
 }
 exports.isHostExists = isHostExists;
+function isValidHostname(h) {
+    if (h.split(".").length !== 3)
+        return false;
+    else if (!h.endsWith(fixed_1.YU_STATIC_DOMAIN_SUFFIX))
+        return false;
+    return fixed_1.subDomainRegexp.test(h.split(".")[0]);
+}
+exports.isValidHostname = isValidHostname;

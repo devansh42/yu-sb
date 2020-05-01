@@ -59,7 +59,7 @@ function validateUp(req, res, next) {
             if (r.filter(function (v) { return v in req.body; }).length != r.length)
                 res.status(400).send("Required Parameters not found").end();
             _a = req.body, hostname = _a.hostname, type = _a.type;
-            if (!isValidHostname(hostname.toString()) || !(type.toString() in ["regular", "spa"])) {
+            if (!info_1.isValidHostname(hostname.toString()) || !(type.toString() in ["regular", "spa"])) {
                 res.status(400).send("Invalid Parameters").end();
             }
             else if (info_1.isHostExists(hostname))
@@ -189,19 +189,12 @@ function listDir(path, ar) {
 function validateDown(req, res, next) {
     var hostname = req.body.hostname;
     var h = hostname.toString();
-    if (isValidHostname(h))
+    if (info_1.isValidHostname(h))
         next();
     else
         res.status(400).send("Invalid Hostname").end();
 }
 exports.validateDown = validateDown;
-function isValidHostname(h) {
-    if (h.split(".").length !== 3)
-        return false;
-    else if (!h.endsWith(fixed_1.YU_STATIC_DOMAIN_SUFFIX))
-        return false;
-    return fixed_1.subDomainRegexp.test(h.split(".")[0]);
-}
 function handleDown(req, res) {
     return __awaiter(this, void 0, void 0, function () {
         var _a, uid, hostname, db, stmt, rows, error_2;
@@ -268,4 +261,11 @@ function sendSignal(hostname, type, deploy) {
         "site-hostname": hostname,
         "site-type": type
     }));
+    var h = hostname.split(".")[0];
+    if (deploy) {
+        rd.sadd("domains", h); //adding to cache
+    }
+    else {
+        rd.srem("domains", h); //removing from cache
+    }
 }
