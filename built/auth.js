@@ -38,6 +38,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
 Object.defineProperty(exports, "__esModule", { value: true });
 var jsonwebtoken_1 = require("jsonwebtoken");
 var db_1 = require("./db");
+var crypto = require("crypto");
 //Validates things for signup/login function
 function validateAuthCredentials(req, res, next) {
     var _a = req.body, email = _a.email, password = _a.password;
@@ -52,6 +53,11 @@ function validateAuthCredentials(req, res, next) {
         res.status(400).send(msg).end();
 }
 exports.validateAuthCredentials = validateAuthCredentials;
+function md5(s) {
+    return crypto.createHash("md5")
+        .update(s, "utf8")
+        .digest("hex");
+}
 function handleLogin(req, res) {
     return __awaiter(this, void 0, void 0, function () {
         var _a, email, password, db, stmt, rows, access_token, error_1;
@@ -68,7 +74,7 @@ function handleLogin(req, res) {
                     return [4 /*yield*/, db.prepare("select uid from users where email=? and password=? limit 1")];
                 case 3:
                     stmt = _b.sent();
-                    return [4 /*yield*/, stmt.all(email, password)];
+                    return [4 /*yield*/, stmt.all(email, md5(password))];
                 case 4:
                     rows = _b.sent();
                     if (rows.length == 1) {
@@ -112,7 +118,7 @@ function handleSignup(req, res) {
                     return [4 /*yield*/, db.prepare("select uid from users where email=? and password=? limit 1")];
                 case 3:
                     stmt = _b.sent();
-                    return [4 /*yield*/, stmt.all(email, password)];
+                    return [4 /*yield*/, stmt.all(email, md5(password))];
                 case 4:
                     rows = _b.sent();
                     if (!(rows.length == 1)) return [3 /*break*/, 5];
@@ -133,7 +139,7 @@ function handleSignup(req, res) {
                 case 8: return [4 /*yield*/, db.prepare("insert into users(email,password)values(?,?)")];
                 case 9:
                     stmt = _b.sent();
-                    return [4 /*yield*/, stmt.run(email, password)];
+                    return [4 /*yield*/, stmt.run(email, md5(password))];
                 case 10:
                     r = _b.sent();
                     access_token = createKJWTToken(r.lastID);

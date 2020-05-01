@@ -43,6 +43,7 @@ var fs = require("fs");
 var path_1 = require("path");
 var tmp_promise_1 = require("tmp-promise");
 var aws = require("aws-sdk");
+var mime = require("mime-types");
 var fixed_1 = require("./fixed");
 var info_1 = require("./info");
 //AWS Configuration initalization
@@ -141,9 +142,15 @@ function uploadFile(hostname, files, wd) {
                 case 2:
                     _a.sent();
                     ar = walkDir(path_1.join(d.path, wd));
-                    p = ar.map(function (src) { return s3.putObject({ Bucket: fixed_1.YU_DO_BUCKET_NAME,
-                        ACL: "public-read",
-                        Body: fs.readFileSync(src), Key: src.replace(path_1.join(d.path, wd), hostname) }).promise(); });
+                    p = ar.map(function (src) {
+                        var t = mime.lookup(src);
+                        return s3.putObject({
+                            Bucket: fixed_1.YU_DO_BUCKET_NAME,
+                            ACL: "public-read",
+                            ContentType: t == false ? "application/octet-stream" : String(t),
+                            Body: fs.readFileSync(src), Key: src.replace(path_1.join(d.path, wd), hostname)
+                        }).promise();
+                    });
                     Promise.all(p)
                         .then(function () {
                     })

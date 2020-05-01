@@ -7,6 +7,8 @@ import * as fs from "fs";
 import { join } from "path";
 import { file, dir, } from "tmp-promise";
 import * as  aws from "aws-sdk";
+import * as mime from "mime-types";
+
 import { YU_DO_SPACES_REGION, YU_DO_SPACES_ACCESS_KEY_ID, YU_DO_SPACES_SECRET_ACCESS_KEY, YU_DO_BUCKET_NAME, YU_DO_SPACES_ENDPOINT, YU_STATIC_DOMAIN_SUFFIX, subDomainRegexp } from "./fixed";
 
 import { isHostExists } from "./info";
@@ -70,11 +72,16 @@ function uploadFile(hostname: string, files: string, wd: string) {
         const d = await dir();
         await x({ file: f.path, cwd: d.path })
         let ar = walkDir(join(d.path, wd))
-       
-        const p = ar.map(src => s3.putObject({ Bucket: YU_DO_BUCKET_NAME,
-            ACL:"public-read", //Canned ACL For public making files publiclly readable
-            Body: fs.readFileSync(src), Key: src.replace(join(d.path, wd), hostname) }).promise()
-        );
+
+        const p = ar.map(src => {
+            const t = mime.lookup(src);
+            return s3.putObject({
+                Bucket: YU_DO_BUCKET_NAME,
+                ACL: "public-read", //Canned ACL For public making files publiclly readable
+                ContentType: t == false ? "application/octet-stream" : String(t),
+                Body: fs.readFileSync(src), Key: src.replace(join(d.path, wd), hostname)
+            }).promise();
+        });
         Promise.all(p)
             .then(() => {
 
