@@ -67,9 +67,14 @@ export async function handleRecommend(req: express.Request, res: express.Respons
 }
 
 export async function validateHostExists(req: express.Request, res: express.Response, next: express.NextFunction) {
+    if ("hostname" in req.query == false) {
+
+        res.status(400).end();
+        return;
+    }
     const { hostname } = req.query;
     const h = String(hostname);
-    if (h == undefined) res.status(400).end();
+
     if (!isValidHostname(h)) res.status(400).end();
     else next();
 
@@ -95,6 +100,15 @@ export async function isHostExists(hostname: string) {
 
 
 }
+
+
+function testIsHostExists() {
+    isHostExists("demo.gstatic.tech")
+        .then(console.log)
+        .catch(console.log);
+
+}
+
 
 export function isValidHostname(h: string) {
     if (h.split(".").length !== 3) return false;

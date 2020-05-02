@@ -145,10 +145,12 @@ function validateHostExists(req, res, next) {
     return __awaiter(this, void 0, void 0, function () {
         var hostname, h;
         return __generator(this, function (_a) {
+            if ("hostname" in req.query == false) {
+                res.status(400).end();
+                return [2 /*return*/];
+            }
             hostname = req.query.hostname;
             h = String(hostname);
-            if (h == undefined)
-                res.status(400).end();
             if (!isValidHostname(h))
                 res.status(400).end();
             else
@@ -196,6 +198,11 @@ function isHostExists(hostname) {
     });
 }
 exports.isHostExists = isHostExists;
+function testIsHostExists() {
+    isHostExists("demo.gstatic.tech")
+        .then(console.log)
+        .catch(console.log);
+}
 function isValidHostname(h) {
     if (h.split(".").length !== 3)
         return false;
