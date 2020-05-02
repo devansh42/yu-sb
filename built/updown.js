@@ -55,7 +55,7 @@ function validateUp(req, res, next) {
     return __awaiter(this, void 0, void 0, function () {
         var r, _a, hostname, type;
         return __generator(this, function (_b) {
-            r = ["hostname", "type", "wd", "type"];
+            r = ["hostname", "type", "wd"];
             if (r.filter(function (v) { return v in req.body; }).length != r.length)
                 res.status(400).send("Required Parameters not found").end();
             _a = req.body, hostname = _a.hostname, type = _a.type;
@@ -74,14 +74,14 @@ exports.validateUp = validateUp;
 //handleUp handles site uploading stuff after request parameter validation
 function handleUp(req, res) {
     return __awaiter(this, void 0, void 0, function () {
-        var _a, hostname, uid, type, files, wd, db, stmt, r, error_1;
+        var _a, hostname, uid, type, wd, db, stmt, r, error_1;
         return __generator(this, function (_b) {
             switch (_b.label) {
                 case 0:
-                    _a = req.body, hostname = _a.hostname, uid = _a.uid, type = _a.type, files = _a.files, wd = _a.wd;
+                    _a = req.body, hostname = _a.hostname, uid = _a.uid, type = _a.type, wd = _a.wd;
                     console.log(type);
                     sendSignal(hostname, type, true); //sending signal to server
-                    uploadFile(hostname, files, wd);
+                    uploadFile(hostname, req.file.path, wd);
                     return [4 /*yield*/, db_1.getDB()];
                 case 1:
                     db = _b.sent();
@@ -127,18 +127,15 @@ function handleUp(req, res) {
     });
 }
 exports.handleUp = handleUp;
-function uploadFile(hostname, files, wd) {
-    var _this = this;
-    tmp_promise_1.file().then(function (f) { return __awaiter(_this, void 0, void 0, function () {
+function uploadFile(hostname, path, wd) {
+    return __awaiter(this, void 0, void 0, function () {
         var d, ar, p;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0:
-                    fs.writeFileSync(f.path, files, { encoding: "base64" });
-                    return [4 /*yield*/, tmp_promise_1.dir()];
+                case 0: return [4 /*yield*/, tmp_promise_1.dir()];
                 case 1:
                     d = _a.sent();
-                    return [4 /*yield*/, tar_1.x({ file: f.path, cwd: d.path })];
+                    return [4 /*yield*/, tar_1.x({ file: path, cwd: d.path })];
                 case 2:
                     _a.sent();
                     ar = walkDir(path_1.join(d.path, wd));
@@ -158,15 +155,13 @@ function uploadFile(hostname, files, wd) {
                         console.log(err);
                     })
                         .finally(function () {
-                        f.cleanup() //Cleaning up resources
-                            .then(function () { })
-                            .catch(console.log);
+                        fs.unlinkSync(path); //Removing uploaded files
                         fs.rmdirSync(d.path, { recursive: true }); //Cleanup temporary directory
                     });
                     return [2 /*return*/];
             }
         });
-    }); });
+    });
 }
 var rd = fs.readdirSync;
 function walkDir(path) {

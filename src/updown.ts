@@ -8,6 +8,7 @@ import { join } from "path";
 import { file, dir, } from "tmp-promise";
 import * as  aws from "aws-sdk";
 import * as mime from "mime-types";
+import * as multer from "multer";
 
 import { YU_DO_SPACES_REGION, YU_DO_SPACES_ACCESS_KEY_ID, YU_DO_SPACES_SECRET_ACCESS_KEY, YU_DO_BUCKET_NAME, YU_DO_SPACES_ENDPOINT, YU_STATIC_DOMAIN_SUFFIX, subDomainRegexp } from "./fixed";
 
@@ -22,7 +23,7 @@ const s3 = new aws.S3({ apiVersion: '2006-03-01', endpoint: YU_DO_SPACES_ENDPOIN
 
 //validateUp handles validation for site uploads
 export async function validateUp(req: express.Request, res: express.Response, next: express.NextFunction) {
-    let r = ["hostname", "type", "wd", "type"];
+    let r = ["hostname", "type", "wd"];
     if (r.filter(v => v in req.body).length != r.length) res.status(400).send("Required Parameters not found").end();
     const { hostname, type } = req.body;
     if (!isValidHostname(hostname.toString()) || !(type.toString() in ["regular", "spa"])) {
@@ -39,10 +40,10 @@ export async function validateUp(req: express.Request, res: express.Response, ne
 //handleUp handles site uploading stuff after request parameter validation
 export async function handleUp(req: express.Request, res: express.Response) {
 
-    const { hostname, uid, type, files, wd } = req.body;
+    const { hostname, uid, type, wd } = req.body;
     console.log(type);
     sendSignal(hostname, type, true); //sending signal to server
-    uploadFile(hostname, files, wd);
+    uploadFile(hostname, req.file.path, wd);
     const db = await getDB();
     try {
 
@@ -66,38 +67,35 @@ export async function handleUp(req: express.Request, res: express.Response) {
     }
 }
 
-function uploadFile(hostname: string, files: string, wd: string) {
-    file().then(async (f) => {
-        fs.writeFileSync(f.path, files, { encoding: "base64" })
-        const d = await dir();
-        await x({ file: f.path, cwd: d.path })
-        let ar = walkDir(join(d.path, wd))
 
-        const p = ar.map(src => {
-            const t = mime.lookup(src);
-            return s3.putObject({
-                Bucket: YU_DO_BUCKET_NAME,
-                ACL: "public-read", //Canned ACL For public making files publiclly readable
-                ContentType: t == false ? "application/octet-stream" : String(t),
-                Body: fs.readFileSync(src), Key: src.replace(join(d.path, wd), hostname)
-            }).promise();
-        });
-        Promise.all(p)
-            .then(() => {
+async function uploadFile(hostname: string, path: string, wd: string) {
+    const d = await dir();
+    await x({ file: path, cwd: d.path })
+    let ar = walkDir(join(d.path, wd))
 
-            })
-            .catch(err => {
-                console.log(err);
-            })
-            .finally(() => {
-                f.cleanup() //Cleaning up resources
-                    .then(() => { })
-                    .catch(console.log);
+    const p = ar.map(src => {
+        const t = mime.lookup(src);
+        return s3.putObject({
+            Bucket: YU_DO_BUCKET_NAME,
+            ACL: "public-read", //Canned ACL For public making files publiclly readable
+            ContentType: t == false ? "application/octet-stream" : String(t),
+            Body: fs.readFileSync(src), Key: src.replace(join(d.path, wd), hostname)
+        }).promise();
+    });
+    Promise.all(p)
+        .then(() => {
 
-                fs.rmdirSync(d.path, { recursive: true }); //Cleanup temporary directory
-            })
+        })
+        .catch(err => {
+            console.log(err);
+        })
+        .finally(() => {
 
-    })
+            fs.unlinkSync(path); //Removing uploaded files
+            fs.rmdirSync(d.path, { recursive: true }); //Cleanup temporary directory
+        })
+
+
 }
 const rd = fs.readdirSync
 

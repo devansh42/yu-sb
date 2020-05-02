@@ -172,6 +172,7 @@ function jwtTokenVerifier(req, res, next) {
         msg = "Invalid jwt token: Authentication Required";
         res.status(403).send(msg).end();
         console.log(msg);
+        return; // Returning back
     }
     try {
         var pay = jsonwebtoken_1.verify(t.split(" ")[1], someSecret);

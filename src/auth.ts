@@ -99,6 +99,7 @@ export function jwtTokenVerifier(req: express.Request, res: express.Response, ne
         msg = "Invalid jwt token: Authentication Required";
         res.status(403).send(msg).end();
         console.log(msg);
+        return ; // Returning back
     }
     try {
         const pay = verify(t.split(" ")[1], someSecret);
