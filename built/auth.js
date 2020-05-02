@@ -176,7 +176,12 @@ function jwtTokenVerifier(req, res, next) {
     }
     try {
         var pay = jsonwebtoken_1.verify(t.split(" ")[1], someSecret);
-        req.body.uid = pay["data"];
+        if (req.body == undefined) {
+            req.body = { uid: [pay["data"]] };
+        }
+        else {
+            req.body.uid = pay["data"];
+        }
         next();
     }
     catch (error) {

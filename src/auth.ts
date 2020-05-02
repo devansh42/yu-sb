@@ -99,17 +99,20 @@ export function jwtTokenVerifier(req: express.Request, res: express.Response, ne
         msg = "Invalid jwt token: Authentication Required";
         res.status(403).send(msg).end();
         console.log(msg);
-        return ; // Returning back
+        return; // Returning back
     }
     try {
         const pay = verify(t.split(" ")[1], someSecret);
+        if (req.body == undefined) {
+            req.body = { uid: [pay["data"]] }
+        } else {
+            req.body.uid = pay["data"];
 
-        req.body.uid = pay["data"];
+        }
         next();
     } catch (error) {
         msg = "Invalid/Expired Token : Authentication Required";
         res.status(403).send(msg).end();
-
         console.log(error)
     }
 }
