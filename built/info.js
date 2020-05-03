@@ -57,11 +57,11 @@ function handleList(req, res) {
                 case 2:
                     _a.trys.push([2, 6, 7, 9]);
                     sql = "select hostname,status from deployments where uid=?";
-                    if (only_deployed == undefined || !only_deployed) {
+                    if (only_deployed == undefined || only_deployed == "false") {
                         //Fetch all
                     }
                     else {
-                        sql.concat(" and status=1");
+                        sql = sql.concat(" and status=1");
                     }
                     return [4 /*yield*/, db.prepare(sql)];
                 case 3:

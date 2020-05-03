@@ -13,14 +13,14 @@ export async function handleList(req: express.Request, res: express.Response) {
     try {
 
         let sql = "select hostname,status from deployments where uid=?";
-        if (only_deployed == undefined || !only_deployed) {
+        if (only_deployed == undefined || only_deployed == "false") {
             //Fetch all
         } else {
-            sql.concat(" and status=1");
+            sql = sql.concat(" and status=1");
         }
 
         let stmt = await db.prepare(sql);
-        let rows = await stmt.all(uid)
+        let rows = await stmt.all(uid);
         await stmt.finalize()
         res.status(200).json(
             rows.map(v => {
