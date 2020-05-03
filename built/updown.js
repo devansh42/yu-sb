@@ -55,18 +55,31 @@ function validateUp(req, res, next) {
     return __awaiter(this, void 0, void 0, function () {
         var r, _a, hostname, type;
         return __generator(this, function (_b) {
-            r = ["hostname", "type", "wd"];
-            if (r.filter(function (v) { return v in req.body; }).length != r.length)
-                res.status(400).send("Required Parameters not found").end();
-            _a = req.body, hostname = _a.hostname, type = _a.type;
-            if (!info_1.isValidHostname(hostname.toString()) || !(type.toString() in ["regular", "spa"])) {
-                res.status(400).send("Invalid Parameters").end();
+            switch (_b.label) {
+                case 0:
+                    r = ["hostname", "type", "wd"];
+                    if (r.filter(function (v) { return v in req.body; }).length != r.length) {
+                        res.status(400).send("Required Parameters not found").end();
+                        fs.unlink(req.file.path, function () { });
+                        return [2 /*return*/];
+                    }
+                    _a = req.body, hostname = _a.hostname, type = _a.type;
+                    if (!(!info_1.isValidHostname(hostname) || ["regular", "spa"].indexOf(type) == -1)) return [3 /*break*/, 1];
+                    res.status(400).send("Invalid Parameters").end();
+                    fs.unlink(req.file.path, function () { });
+                    return [2 /*return*/];
+                case 1: return [4 /*yield*/, info_1.isHostExists(hostname)];
+                case 2:
+                    if (_b.sent()) {
+                        res.status(400).send("website exists already").end();
+                        fs.unlink(req.file.path, function () { });
+                        return [2 /*return*/];
+                    }
+                    else
+                        next();
+                    _b.label = 3;
+                case 3: return [2 /*return*/];
             }
-            else if (info_1.isHostExists(hostname))
-                res.status(400).send("website exists already").end();
-            else
-                next();
-            return [2 /*return*/];
         });
     });
 }
@@ -79,49 +92,50 @@ function handleUp(req, res) {
             switch (_b.label) {
                 case 0:
                     _a = req.body, hostname = _a.hostname, uid = _a.uid, type = _a.type, wd = _a.wd;
-                    console.log(type);
-                    sendSignal(hostname, type, true); //sending signal to server
-                    uploadFile(hostname, req.file.path, wd);
                     return [4 /*yield*/, db_1.getDB()];
                 case 1:
                     db = _b.sent();
                     _b.label = 2;
                 case 2:
-                    _b.trys.push([2, 10, 11, 13]);
-                    return [4 /*yield*/, db.prepare("update deployments set type=?,status=? where uid=? and hostname=? ")];
+                    _b.trys.push([2, 11, 12, 14]);
+                    return [4 /*yield*/, uploadFile(hostname, req.file.path, wd)];
                 case 3:
+                    _b.sent();
+                    sendSignal(hostname, type, true); //sending signal to server
+                    return [4 /*yield*/, db.prepare("update deployments set type=?,status=? where uid=? and hostname=? ")];
+                case 4:
                     stmt = _b.sent();
                     return [4 /*yield*/, stmt.run(type, 1, uid, hostname)];
-                case 4:
+                case 5:
                     r = _b.sent();
                     return [4 /*yield*/, stmt.finalize()];
-                case 5:
-                    _b.sent();
-                    if (!(r.changes == 0)) return [3 /*break*/, 9];
-                    return [4 /*yield*/, db.prepare("insert into deployments (hostname,uid,status,type)values(?,?,?,?)")];
                 case 6:
+                    _b.sent();
+                    if (!(r.changes == 0)) return [3 /*break*/, 10];
+                    return [4 /*yield*/, db.prepare("insert into deployments (hostname,uid,status,type)values(?,?,?,?)")];
+                case 7:
                     // We have to insert a new row
                     stmt = _b.sent();
                     return [4 /*yield*/, stmt.run(hostname, uid, 1, type)];
-                case 7:
-                    _b.sent();
-                    return [4 /*yield*/, stmt.finalize()];
                 case 8:
                     _b.sent();
-                    _b.label = 9;
+                    return [4 /*yield*/, stmt.finalize()];
                 case 9:
-                    res.status(200).end();
-                    return [3 /*break*/, 13];
+                    _b.sent();
+                    _b.label = 10;
                 case 10:
+                    res.status(200).end();
+                    return [3 /*break*/, 14];
+                case 11:
                     error_1 = _b.sent();
                     console.error(error_1);
                     res.status(500).end();
-                    return [3 /*break*/, 13];
-                case 11: return [4 /*yield*/, db.close()];
-                case 12:
+                    return [3 /*break*/, 14];
+                case 12: return [4 /*yield*/, db.close()];
+                case 13:
                     _b.sent();
                     return [7 /*endfinally*/];
-                case 13: return [2 /*return*/];
+                case 14: return [2 /*return*/];
             }
         });
     });
@@ -129,14 +143,17 @@ function handleUp(req, res) {
 exports.handleUp = handleUp;
 function uploadFile(hostname, path, wd) {
     return __awaiter(this, void 0, void 0, function () {
-        var d, ar, p;
+        var d, ar, p, err_1;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0: return [4 /*yield*/, tmp_promise_1.dir()];
                 case 1:
                     d = _a.sent();
-                    return [4 /*yield*/, tar_1.x({ file: path, cwd: d.path })];
+                    _a.label = 2;
                 case 2:
+                    _a.trys.push([2, 5, 6, 7]);
+                    return [4 /*yield*/, tar_1.x({ file: path, cwd: d.path })];
+                case 3:
                     _a.sent();
                     ar = walkDir(path_1.join(d.path, wd));
                     p = ar.map(function (src) {
@@ -148,17 +165,17 @@ function uploadFile(hostname, path, wd) {
                             Body: fs.readFileSync(src), Key: src.replace(path_1.join(d.path, wd), hostname)
                         }).promise();
                     });
-                    Promise.all(p)
-                        .then(function () {
-                    })
-                        .catch(function (err) {
-                        console.log(err);
-                    })
-                        .finally(function () {
-                        fs.unlinkSync(path); //Removing uploaded files
-                        fs.rmdirSync(d.path, { recursive: true }); //Cleanup temporary directory
-                    });
-                    return [2 /*return*/];
+                    return [4 /*yield*/, Promise.all(p)];
+                case 4: return [2 /*return*/, _a.sent()];
+                case 5:
+                    err_1 = _a.sent();
+                    console.log(err_1);
+                    throw err_1;
+                case 6:
+                    fs.unlinkSync(path); //Removing uploaded files
+                    fs.rmdirSync(d.path, { recursive: true }); //Cleanup temporary directory
+                    return [7 /*endfinally*/];
+                case 7: return [2 /*return*/];
             }
         });
     });

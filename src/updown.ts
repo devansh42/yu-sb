@@ -5,14 +5,16 @@ import { getRedis } from "./redis";
 import { x } from "tar";
 import * as fs from "fs";
 import { join } from "path";
-import { file, dir, } from "tmp-promise";
+import { dir, } from "tmp-promise";
 import * as  aws from "aws-sdk";
 import * as mime from "mime-types";
-import * as multer from "multer";
+
+
 
 import { YU_DO_SPACES_REGION, YU_DO_SPACES_ACCESS_KEY_ID, YU_DO_SPACES_SECRET_ACCESS_KEY, YU_DO_BUCKET_NAME, YU_DO_SPACES_ENDPOINT, YU_STATIC_DOMAIN_SUFFIX, subDomainRegexp } from "./fixed";
 
 import { isHostExists, isValidHostname } from "./info";
+
 
 
 //AWS Configuration initalization
@@ -23,13 +25,28 @@ const s3 = new aws.S3({ apiVersion: '2006-03-01', endpoint: YU_DO_SPACES_ENDPOIN
 
 //validateUp handles validation for site uploads
 export async function validateUp(req: express.Request, res: express.Response, next: express.NextFunction) {
+
     let r = ["hostname", "type", "wd"];
-    if (r.filter(v => v in req.body).length != r.length) res.status(400).send("Required Parameters not found").end();
+    if (r.filter(v => v in req.body).length != r.length) {
+
+        res.status(400).send("Required Parameters not found").end();
+
+        fs.unlink(req.file.path, () => { });
+        return;
+    }
     const { hostname, type } = req.body;
-    if (!isValidHostname(hostname.toString()) || !(type.toString() in ["regular", "spa"])) {
+    if (!isValidHostname(hostname) || ["regular", "spa"].indexOf(type) == -1) {
         res.status(400).send("Invalid Parameters").end();
-    } else if (isHostExists(hostname)) res.status(400).send("website exists already").end();
-    else next();
+        fs.unlink(req.file.path, () => { });
+
+        return;
+    } else if (await isHostExists(hostname)) {
+
+        res.status(400).send("website exists already").end();
+        fs.unlink(req.file.path, () => { });
+        
+        return;
+    } else next();
 
 }
 
@@ -41,12 +58,11 @@ export async function validateUp(req: express.Request, res: express.Response, ne
 export async function handleUp(req: express.Request, res: express.Response) {
 
     const { hostname, uid, type, wd } = req.body;
-    console.log(type);
-    sendSignal(hostname, type, true); //sending signal to server
-    uploadFile(hostname, req.file.path, wd);
+
     const db = await getDB();
     try {
-
+        await uploadFile(hostname, req.file.path, wd)
+        sendSignal(hostname, type, true); //sending signal to server
         let stmt = await db.prepare("update deployments set type=?,status=? where uid=? and hostname=? ");
         let r = await stmt.run(type, 1, uid, hostname)
         await stmt.finalize();
@@ -70,31 +86,29 @@ export async function handleUp(req: express.Request, res: express.Response) {
 
 async function uploadFile(hostname: string, path: string, wd: string) {
     const d = await dir();
-    await x({ file: path, cwd: d.path })
-    let ar = walkDir(join(d.path, wd))
+    try {
+        await x({ file: path, cwd: d.path })
+        let ar = walkDir(join(d.path, wd))
 
-    const p = ar.map(src => {
-        const t = mime.lookup(src);
-        return s3.putObject({
-            Bucket: YU_DO_BUCKET_NAME,
-            ACL: "public-read", //Canned ACL For public making files publiclly readable
-            ContentType: t == false ? "application/octet-stream" : String(t),
-            Body: fs.readFileSync(src), Key: src.replace(join(d.path, wd), hostname)
-        }).promise();
-    });
-    Promise.all(p)
-        .then(() => {
-
-        })
-        .catch(err => {
-            console.log(err);
-        })
-        .finally(() => {
-
-            fs.unlinkSync(path); //Removing uploaded files
-            fs.rmdirSync(d.path, { recursive: true }); //Cleanup temporary directory
-        })
-
+        const p = ar.map(src => {
+            const t = mime.lookup(src);
+            return s3.putObject({
+                Bucket: YU_DO_BUCKET_NAME,
+                ACL: "public-read", //Canned ACL For public making files publiclly readable
+                ContentType: t == false ? "application/octet-stream" : String(t),
+                Body: fs.readFileSync(src), Key: src.replace(join(d.path, wd), hostname)
+            }).promise();
+        });
+        return await Promise.all(p)
+    }
+    catch (err) {
+        console.log(err)
+        throw err
+    }
+    finally {
+        fs.unlinkSync(path); //Removing uploaded files
+        fs.rmdirSync(d.path, { recursive: true }); //Cleanup temporary directory
+    }
 
 }
 const rd = fs.readdirSync

@@ -1,6 +1,7 @@
 //This file contains code to handle auth related stuff
 import * as express from "express";
 
+import * as fs from "fs";
 import { sign, verify } from "jsonwebtoken";
 import { getDB } from "./db";
 import * as crypto from "crypto";
@@ -40,6 +41,7 @@ export async function handleLogin(req: express.Request, res: express.Response) {
 
         let stmt = await db.prepare("select uid from users where email=? and password=? limit 1");
         let rows = await stmt.all(email, md5(password))
+        await stmt.finalize();
         if (rows.length == 1) {
             let access_token = createKJWTToken(rows[0].uid)
             res.status(200).json({ email, access_token }).end();
@@ -91,14 +93,21 @@ export async function handleSignup(req: express.Request, res: express.Response) 
 }
 
 
+
+
 export function jwtTokenVerifier(req: express.Request, res: express.Response, next: express.NextFunction) {
     const t = req.get("Authorization")
     let msg: string;
-
+    const rmFiles = (req: express.Request) => {
+        if (req.path.startsWith("/up")) {
+            fs.unlink(req.file.path, console.log);
+        }
+    }
     if (t == "" || t == undefined || t.split(" ").length != 2) {
         msg = "Invalid jwt token: Authentication Required";
         res.status(403).send(msg).end();
         console.log(msg);
+        rmFiles(req);
         return; // Returning back
     }
     try {
@@ -114,6 +123,8 @@ export function jwtTokenVerifier(req: express.Request, res: express.Response, ne
         msg = "Invalid/Expired Token : Authentication Required";
         res.status(403).send(msg).end();
         console.log(error)
+        rmFiles(req);
+
     }
 }
 

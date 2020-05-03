@@ -36,6 +36,7 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+var fs = require("fs");
 var jsonwebtoken_1 = require("jsonwebtoken");
 var db_1 = require("./db");
 var crypto = require("crypto");
@@ -71,13 +72,16 @@ function handleLogin(req, res) {
                     db = _b.sent();
                     _b.label = 2;
                 case 2:
-                    _b.trys.push([2, 5, 6, 8]);
+                    _b.trys.push([2, 6, 7, 9]);
                     return [4 /*yield*/, db.prepare("select uid from users where email=? and password=? limit 1")];
                 case 3:
                     stmt = _b.sent();
                     return [4 /*yield*/, stmt.all(email, md5(password))];
                 case 4:
                     rows = _b.sent();
+                    return [4 /*yield*/, stmt.finalize()];
+                case 5:
+                    _b.sent();
                     if (rows.length == 1) {
                         access_token = createKJWTToken(rows[0].uid);
                         res.status(200).json({ email: email, access_token: access_token }).end();
@@ -86,17 +90,17 @@ function handleLogin(req, res) {
                         //Invalid credentials
                         res.status(403).send().end();
                     }
-                    return [3 /*break*/, 8];
-                case 5:
+                    return [3 /*break*/, 9];
+                case 6:
                     error_1 = _b.sent();
                     console.error(error_1);
                     res.status(500).end();
-                    return [3 /*break*/, 8];
-                case 6: return [4 /*yield*/, db.close()];
-                case 7:
+                    return [3 /*break*/, 9];
+                case 7: return [4 /*yield*/, db.close()];
+                case 8:
                     _b.sent();
                     return [7 /*endfinally*/];
-                case 8: return [2 /*return*/];
+                case 9: return [2 /*return*/];
             }
         });
     });
@@ -168,10 +172,16 @@ exports.handleSignup = handleSignup;
 function jwtTokenVerifier(req, res, next) {
     var t = req.get("Authorization");
     var msg;
+    var rmFiles = function (req) {
+        if (req.path.startsWith("/up")) {
+            fs.unlink(req.file.path, console.log);
+        }
+    };
     if (t == "" || t == undefined || t.split(" ").length != 2) {
         msg = "Invalid jwt token: Authentication Required";
         res.status(403).send(msg).end();
         console.log(msg);
+        rmFiles(req);
         return; // Returning back
     }
     try {
@@ -188,6 +198,7 @@ function jwtTokenVerifier(req, res, next) {
         msg = "Invalid/Expired Token : Authentication Required";
         res.status(403).send(msg).end();
         console.log(error);
+        rmFiles(req);
     }
 }
 exports.jwtTokenVerifier = jwtTokenVerifier;
