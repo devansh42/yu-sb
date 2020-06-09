@@ -143,26 +143,33 @@ function handleUp(req, res) {
 exports.handleUp = handleUp;
 function uploadFile(hostname, path, wd) {
     return __awaiter(this, void 0, void 0, function () {
-        var d, ar, p, err_1;
+        var tempDir, y, ar, p, err_1;
         return __generator(this, function (_a) {
             switch (_a.label) {
                 case 0: return [4 /*yield*/, tmp_promise_1.dir()];
                 case 1:
-                    d = _a.sent();
+                    tempDir = _a.sent();
                     _a.label = 2;
                 case 2:
                     _a.trys.push([2, 5, 6, 7]);
-                    return [4 /*yield*/, tar_1.x({ file: path, cwd: d.path })];
+                    return [4 /*yield*/, tar_1.x({ file: path, cwd: tempDir.path })
+                        //for Window paths
+                    ];
                 case 3:
                     _a.sent();
-                    ar = walkDir(path_1.join(d.path, wd));
+                    //for Window paths
+                    if (wd.split(":").length > 1 && wd.indexOf("\\") > -1) {
+                        y = wd.split(":")[1];
+                        wd = y.split("\\").join("/");
+                    }
+                    ar = walkDir(path_1.join(tempDir.path, wd));
                     p = ar.map(function (src) {
                         var t = mime.lookup(src);
                         return s3.putObject({
                             Bucket: fixed_1.YU_DO_BUCKET_NAME,
                             ACL: "public-read",
                             ContentType: t == false ? "application/octet-stream" : String(t),
-                            Body: fs.readFileSync(src), Key: src.replace(path_1.join(d.path, wd), hostname)
+                            Body: fs.readFileSync(src), Key: src.replace(path_1.join(tempDir.path, wd), hostname)
                         }).promise();
                     });
                     return [4 /*yield*/, Promise.all(p)];
@@ -173,7 +180,7 @@ function uploadFile(hostname, path, wd) {
                     throw err_1;
                 case 6:
                     fs.unlinkSync(path); //Removing uploaded files
-                    fs.rmdirSync(d.path, { recursive: true }); //Cleanup temporary directory
+                    fs.rmdirSync(tempDir.path, { recursive: true }); //Cleanup temporary directory
                     return [7 /*endfinally*/];
                 case 7: return [2 /*return*/];
             }

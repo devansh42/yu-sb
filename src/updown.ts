@@ -44,7 +44,7 @@ export async function validateUp(req: express.Request, res: express.Response, ne
 
         res.status(400).send("website exists already").end();
         fs.unlink(req.file.path, () => { });
-        
+
         return;
     } else next();
 
@@ -85,10 +85,18 @@ export async function handleUp(req: express.Request, res: express.Response) {
 
 
 async function uploadFile(hostname: string, path: string, wd: string) {
-    const d = await dir();
+    const tempDir = await dir();
     try {
-        await x({ file: path, cwd: d.path })
-        let ar = walkDir(join(d.path, wd))
+        await x({ file: path, cwd: tempDir.path })
+        //for Window paths
+        if (wd.split(":").length > 1 && wd.indexOf("\\") > -1) {
+            //Is a windows path
+            let y = wd.split(":")[1];
+            wd = y.split("\\").join("/")
+        }
+
+
+        let ar = walkDir(join(tempDir.path, wd));
 
         const p = ar.map(src => {
             const t = mime.lookup(src);
@@ -96,7 +104,7 @@ async function uploadFile(hostname: string, path: string, wd: string) {
                 Bucket: YU_DO_BUCKET_NAME,
                 ACL: "public-read", //Canned ACL For public making files publiclly readable
                 ContentType: t == false ? "application/octet-stream" : String(t),
-                Body: fs.readFileSync(src), Key: src.replace(join(d.path, wd), hostname)
+                Body: fs.readFileSync(src), Key: src.replace(join(tempDir.path, wd), hostname)
             }).promise();
         });
         return await Promise.all(p)
@@ -107,7 +115,7 @@ async function uploadFile(hostname: string, path: string, wd: string) {
     }
     finally {
         fs.unlinkSync(path); //Removing uploaded files
-        fs.rmdirSync(d.path, { recursive: true }); //Cleanup temporary directory
+        fs.rmdirSync(tempDir.path, { recursive: true }); //Cleanup temporary directory
     }
 
 }
